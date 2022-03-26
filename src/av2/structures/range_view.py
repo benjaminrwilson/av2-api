@@ -11,9 +11,9 @@ from typing import Final, Tuple
 import cv2
 import numpy as np
 
+import av2.structures.sweep as sweep
 from av2.geometry.geometry import sph_to_cart
 from av2.geometry.se3 import SE3
-from av2.structures.sweep import Sweep
 from av2.utils.constants import MAX_USHORT, PI, TAU
 from av2.utils.io import read_ego_SE3_sensor
 from av2.utils.typing import NDArrayBool, NDArrayByte, NDArrayFloat, NDArrayInt, NDArrayUShort
@@ -65,7 +65,7 @@ class RangeView:
     range_resolution: float
     offset_ns_resolution: float
 
-    def as_sweep(self) -> Sweep:
+    def as_sweep(self) -> sweep.Sweep:
         """Converts a range image of shape (n_inclination_bins,n_azimuth_bins,range) to a set of points in R^3 (x,y,z).
 
         Returns:
@@ -94,7 +94,7 @@ class RangeView:
         xyz = self.ego_SE3_up_lidar.transform_point_cloud(xyz)
         laser_number: NDArrayByte = inc_idx.astype(np.uint8)
 
-        return Sweep(
+        return sweep.Sweep(
             xyz=xyz,
             intensity=intensity,
             laser_number=laser_number,
