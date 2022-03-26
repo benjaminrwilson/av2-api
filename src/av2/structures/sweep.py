@@ -49,7 +49,7 @@ class Sweep:
 
     def __len__(self) -> int:
         """Return the number of LiDAR returns in the aggregated sweep."""
-        return int(self.xyz.shape[0])
+        return len(self.xyz)
 
     def as_range_view(
         self,
