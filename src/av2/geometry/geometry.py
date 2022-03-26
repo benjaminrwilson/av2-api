@@ -148,6 +148,30 @@ def cart_to_sph(xyz: NDArrayFloat) -> NDArrayFloat:
     """Convert Cartesian coordinates into spherical coordinates.
 
     This function converts a set of points in R^3 to its spherical representation in R^3.
+    NOTE: Ellipses indicate any number of proceeding dimensions allowed for input.
+
+    Args:
+        xyz: (...,3) Array of points (x,y,z) in Cartesian space.
+
+    Returns:
+        (...,3) Array in spherical space.
+    """
+    x = xyz[..., 0]
+    y = xyz[..., 1]
+    z = xyz[..., 2]
+
+    hypot_xy = np.hypot(x, y)
+    radius = np.hypot(hypot_xy, z)
+    inclination = np.arctan2(z, hypot_xy)
+    azimuth = np.arctan2(y, x)
+
+    return np.stack((azimuth, inclination, radius), axis=-1)
+
+
+def cart_to_sph(xyz: NDArrayFloat) -> NDArrayFloat:
+    """Convert Cartesian coordinates into spherical coordinates.
+
+    This function converts a set of points in R^3 to its spherical representation in R^3.
 
     NOTE: Ellipses indicate any number of proceeding dimensions allowed for input.
 

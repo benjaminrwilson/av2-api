@@ -7,9 +7,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
+from av2.geometry.geometry import cart_to_sph
 from av2.geometry.se3 import SE3
+from av2.structures.range_view import INTENSITY_FILL_VALUE, LASER_NUMBER_TO_ROW, RANGE_FILL_VALUE, RangeView
+from av2.utils.constants import PI, TAU
 from av2.utils.io import read_ego_SE3_sensor, read_feather
-from av2.utils.typing import NDArrayByte, NDArrayFloat, NDArrayInt
+from av2.utils.typing import NDArrayByte, NDArrayFloat, NDArrayInt, NDArrayUShort
 
 
 @dataclass
@@ -45,6 +50,79 @@ class Sweep:
     def __len__(self) -> int:
         """Return the number of LiDAR returns in the aggregated sweep."""
         return int(self.xyz.shape[0])
+
+    def as_range_view(
+        self,
+        n_inclination_bins: int = 64,
+        n_azimuth_bins: int = 1800,
+        range_resolution: float = 0.001,
+        offset_ns_resolution: float = 0.001,
+    ) -> RangeView:
+        """Convert a set of points in R^3 (x,y,z) to range image of shape (n_inclination_bins,n_azimuth_bins,range).
+
+        Args:
+            n_inclination_bins: Vertical resolution of the range image.
+            n_azimuth_bins: Horizontal resolution of the range image.
+            range_resolution: Size of each discrete range bin.
+            offset_ns_resolution: Size of each discrete offset bin.
+
+        Returns:
+            The range image containing range, intensity, and nanosecond offset.
+        """
+        xyz_up_lidar = self.ego_SE3_up_lidar.inverse().transform_point_cloud(self.xyz)
+        offset_ns = self.offset_ns
+
+        sph = cart_to_sph(xyz_up_lidar)
+
+        az = sph[..., 0]
+        inc = sph[..., 1]
+        rad = sph[..., 2]
+        intensity = self.intensity
+
+        perm: NDArrayInt = np.argsort(rad)
+        inc = inc[perm]
+        az, rad = az[perm], rad[perm]
+        intensity = intensity[perm]
+        offset_ns = offset_ns[perm]
+
+        az += PI
+        az *= n_azimuth_bins / TAU
+        az_idx = az.astype(int)
+        inc_idx = LASER_NUMBER_TO_ROW[self.laser_number][perm]
+
+        inc_mask = np.greater_equal(inc_idx, 0) & np.less(inc_idx, n_inclination_bins)
+        az_mask = np.greater_equal(az_idx, 0) & np.less(az_idx, n_azimuth_bins)
+
+        mask = np.logical_and(inc_mask, az_mask)
+        inc_idx = inc_idx[mask]
+        az_idx = az_idx[mask]
+        rad = rad[mask]
+        offset_ns = offset_ns[mask]
+
+        offset_ns = np.divide(offset_ns, offset_ns_resolution)
+        shape = (n_inclination_bins, n_azimuth_bins, 1)
+
+        rad = np.divide(rad, range_resolution)
+        rad = np.floor(rad)  # Avoid overflow.
+        range_im: NDArrayUShort = np.full(shape, fill_value=RANGE_FILL_VALUE, dtype=np.uint16)
+        range_im[inc_idx, az_idx, 0] = rad.astype(np.uint16)
+
+        intensity_im: NDArrayByte = np.full(shape, fill_value=INTENSITY_FILL_VALUE, dtype=np.uint8)
+        intensity_im[inc_idx, az_idx, 0] = intensity
+
+        offset_im: NDArrayUShort = np.full(shape, fill_value=RANGE_FILL_VALUE, dtype=np.uint16)
+        offset_im[inc_idx, az_idx, 0] = offset_ns
+
+        return RangeView(
+            range=range_im,
+            intensity=intensity_im,
+            offset_ns=offset_im,
+            timestamp_ns=self.timestamp_ns,
+            ego_SE3_up_lidar=self.ego_SE3_up_lidar,
+            ego_SE3_down_lidar=self.ego_SE3_down_lidar,
+            range_resolution=range_resolution,
+            offset_ns_resolution=offset_ns_resolution,
+        )
 
     @classmethod
     def from_feather(cls, lidar_feather_path: Path) -> Sweep:

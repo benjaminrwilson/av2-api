@@ -16,7 +16,7 @@ from av2.geometry.se3 import SE3
 from av2.structures.sweep import Sweep
 from av2.utils.constants import MAX_USHORT, PI, TAU
 from av2.utils.io import read_ego_SE3_sensor
-from av2.utils.typing import NDArrayBool, NDArrayByte, NDArrayFloat, NDArrayInt, NDArrayUInt16
+from av2.utils.typing import NDArrayBool, NDArrayByte, NDArrayFloat, NDArrayInt, NDArrayUShort
 
 # fmt: off
 
@@ -56,9 +56,9 @@ class RangeView:
         offset_ns_resolution: Size of each discrete offset bin.
     """
 
-    range: NDArrayUInt16
+    range: NDArrayUShort
     intensity: NDArrayByte
-    offset_ns: NDArrayUInt16
+    offset_ns: NDArrayUShort
     timestamp_ns: int
     ego_SE3_up_lidar: SE3
     ego_SE3_down_lidar: SE3
@@ -79,7 +79,7 @@ class RangeView:
         az_idx: NDArrayInt = out[1].astype(int)
 
         intensity = self.intensity[inc_idx, az_idx]
-        offset_ns: NDArrayUInt16 = self.offset_ns[inc_idx, az_idx]
+        offset_ns: NDArrayUShort = self.offset_ns[inc_idx, az_idx]
 
         rad = self.range[inc_idx, az_idx] * self.range_resolution
         inc = ROW_TO_INC[inc_idx]
@@ -124,9 +124,9 @@ class RangeView:
         intensity_path = path / "intensity.png"
         offset_path = path / "offset_ns.png"
 
-        range: NDArrayUInt16 = cv2.imread(str(range_path), cv2.IMREAD_ANYDEPTH)[..., None]
+        range: NDArrayUShort = cv2.imread(str(range_path), cv2.IMREAD_ANYDEPTH)[..., None]
         intensity: NDArrayByte = cv2.imread(str(intensity_path), cv2.IMREAD_ANYDEPTH)[..., None]
-        offset_ns: NDArrayUInt16 = cv2.imread(str(offset_path), cv2.IMREAD_ANYDEPTH)[..., None]
+        offset_ns: NDArrayUShort = cv2.imread(str(offset_path), cv2.IMREAD_ANYDEPTH)[..., None]
         timestamp_ns = int(path.stem)
 
         ego_SE3_sensor = read_ego_SE3_sensor(Path(path).parent.parent.parent)
