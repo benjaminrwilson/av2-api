@@ -8,12 +8,16 @@ import sys
 from pathlib import Path
 from typing import Final
 
+import numpy as np
+
 # Difference between 1.0 and the least value greater than 1.0 that is representable as a float.
 # https://docs.python.org/3/library/sys.html#sys.float_info
 EPS: Final[float] = sys.float_info.epsilon
 
 # 3.14159 ...
 PI: Final[float] = math.pi
+
+TAU: Final[float] = math.tau
 
 # Not a number.
 NAN: Final[float] = math.nan
@@ -23,3 +27,6 @@ HOME: Final[Path] = Path.home()
 
 # Max number of logical cores available on the current machine.
 MAX_CPUS: Final[int] = mp.cpu_count()
+
+# Max value for unsigned 16 bit integer.
+MAX_USHORT: Final[int] = np.iinfo(np.uint16).max
