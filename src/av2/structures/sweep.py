@@ -9,9 +9,9 @@ from pathlib import Path
 
 import numpy as np
 
+import av2.structures.range_view as range_view
 from av2.geometry.geometry import cart_to_sph
 from av2.geometry.se3 import SE3
-import av2.structures.range_view as range_view
 from av2.utils.constants import PI, TAU
 from av2.utils.io import read_ego_SE3_sensor, read_feather
 from av2.utils.typing import NDArrayByte, NDArrayFloat, NDArrayInt, NDArrayUShort
