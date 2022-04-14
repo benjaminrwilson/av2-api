@@ -153,10 +153,10 @@ class Sweep:
         timestamp_ns = int(lidar_feather_path.stem)
         lidar = read_feather(lidar_feather_path)
 
-        xyz = lidar.loc[:, ["x", "y", "z"]].to_numpy().astype(float)
-        intensity = lidar.loc[:, ["intensity"]].to_numpy().squeeze()
-        laser_number = lidar.loc[:, ["laser_number"]].to_numpy().squeeze()
-        offset_ns = lidar.loc[:, ["offset_ns"]].to_numpy().squeeze()
+        xyz: NDArrayFloat = lidar.loc[:, ["x", "y", "z"]].to_numpy().astype(float)
+        intensity: NDArrayByte = lidar.loc[:, ["intensity"]].to_numpy().squeeze()
+        laser_number: NDArrayByte = lidar.loc[:, ["laser_number"]].to_numpy().squeeze()
+        offset_ns: NDArrayInt = lidar.loc[:, ["offset_ns"]].to_numpy().squeeze()
 
         log_dir = lidar_feather_path.parent.parent.parent
         sensor_name_to_pose = read_ego_SE3_sensor(log_dir=log_dir)
