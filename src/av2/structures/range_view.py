@@ -46,9 +46,10 @@ class RangeView:
     """Models a sweep as a dense range image.
 
     Args:
-        range: (H,W,1) image representing the range in spherical lidar coordinates.
-        intensity: (H,W,1) image representing the lidar intensity.
-        offset_ns: (H,W,1) image containing the nanosecond offsets _from_ the start of the sweep.
+        range_img: (H,W,1) Image representing the range in spherical lidar coordinates.
+        xyz_img: (H,W,1) Image containing the (x,y,z) Cartesian coordinates.
+        intensity_img: (H,W,1) Image representing the lidar intensity.
+        offset_ns_img: (H,W,1) Image containing the nanosecond offsets _from_ the start of the sweep.
         tov_ns: (1,) Nanosecond timestamp _at_ the start of the sweep.
         ego_SE3_up_lidar: Pose of the up lidar in the egovehicle reference frame. Translation component is in meters.
         ego_SE3_down_lidar: Pose of the down lidar in the egovehicle reference frame. Translation component is in meters.
@@ -56,9 +57,10 @@ class RangeView:
         offset_ns_resolution: Size of each discrete offset bin.
     """
 
-    range: NDArrayUShort
-    intensity: NDArrayByte
-    offset_ns: NDArrayUShort
+    range_img: NDArrayUShort
+    xyz_img: NDArrayFloat
+    intensity_img: NDArrayByte
+    offset_ns_img: NDArrayUShort
     timestamp_ns: int
     ego_SE3_up_lidar: SE3
     ego_SE3_down_lidar: SE3
@@ -71,17 +73,16 @@ class RangeView:
         Returns:
             Sweep view of the point cloud.
         """
+        n_inclination_bins, n_azimuth_bins = self.range_img.shape[:2]
 
-        n_inclination_bins, n_azimuth_bins = self.range.shape[:2]
-
-        out: Tuple[NDArrayBool, ...] = np.nonzero(self.range != MAX_USHORT)
+        out: Tuple[NDArrayBool, ...] = np.nonzero(self.range_img != MAX_USHORT)
         inc_idx: NDArrayInt = out[0].astype(int)
         az_idx: NDArrayInt = out[1].astype(int)
 
-        intensity = self.intensity[inc_idx, az_idx]
-        offset_ns: NDArrayUShort = self.offset_ns[inc_idx, az_idx]
+        intensity = self.intensity_img[inc_idx, az_idx]
+        offset_ns: NDArrayUShort = self.offset_ns_img[inc_idx, az_idx]
 
-        rad = self.range[inc_idx, az_idx] * self.range_resolution
+        rad = self.range_img[inc_idx, az_idx] * self.range_resolution
         inc = ROW_TO_INC[inc_idx]
 
         # Map azimuth bins to real-valued azimuth values.
@@ -121,12 +122,14 @@ class RangeView:
             The range view of the point cloud.
         """
         range_path = path / "range.png"
+        xyz_path = path / "xyz.png"
         intensity_path = path / "intensity.png"
         offset_path = path / "offset_ns.png"
 
-        range: NDArrayUShort = cv2.imread(str(range_path), cv2.IMREAD_ANYDEPTH)[..., None]
-        intensity: NDArrayByte = cv2.imread(str(intensity_path), cv2.IMREAD_ANYDEPTH)[..., None]
-        offset_ns: NDArrayUShort = cv2.imread(str(offset_path), cv2.IMREAD_ANYDEPTH)[..., None]
+        range_img: NDArrayUShort = cv2.imread(str(range_path), cv2.IMREAD_ANYDEPTH)[..., None]
+        xyz_img: NDArrayFloat = cv2.imread(str(xyz_path), cv2.IMREAD_ANYDEPTH)
+        intensity_img: NDArrayByte = cv2.imread(str(intensity_path), cv2.IMREAD_ANYDEPTH)[..., None]
+        offset_ns_img: NDArrayUShort = cv2.imread(str(offset_path), cv2.IMREAD_ANYDEPTH)[..., None]
         timestamp_ns = int(path.stem)
 
         ego_SE3_sensor = read_ego_SE3_sensor(Path(path).parent.parent.parent)
@@ -134,9 +137,10 @@ class RangeView:
         ego_SE3_down_lidar = ego_SE3_sensor["down_lidar"]
 
         return cls(
-            range=range,
-            intensity=intensity,
-            offset_ns=offset_ns,
+            range_img=range_img,
+            xyz_img=xyz_img,
+            intensity_img=intensity_img,
+            offset_ns_img=offset_ns_img,
             timestamp_ns=timestamp_ns,
             ego_SE3_up_lidar=ego_SE3_up_lidar,
             ego_SE3_down_lidar=ego_SE3_down_lidar,
@@ -164,6 +168,6 @@ class RangeView:
         dst_intensity = dst / "intensity.png"
         dst_offset_ns = dst / "offset_ns.png"
 
-        cv2.imwrite(str(dst_range), self.range)
-        cv2.imwrite(str(dst_intensity), self.intensity)
-        cv2.imwrite(str(dst_offset_ns), self.offset_ns)
+        cv2.imwrite(str(dst_range), self.range_img)
+        cv2.imwrite(str(dst_intensity), self.intensity_img)
+        cv2.imwrite(str(dst_offset_ns), self.offset_ns_img)

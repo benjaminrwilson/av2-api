@@ -84,6 +84,7 @@ class Sweep:
         az, rad = az[perm], rad[perm]
         intensity = intensity[perm]
         offset_ns = offset_ns[perm]
+        xyz_up_lidar = xyz_up_lidar[perm]
 
         az += PI
         az *= n_azimuth_bins / TAU
@@ -104,19 +105,23 @@ class Sweep:
 
         rad = np.divide(rad, range_resolution)
         rad = np.round(rad)
-        range_im: NDArrayUShort = np.full(shape, fill_value=range_view.RANGE_FILL_VALUE, dtype=np.uint16)
-        range_im[inc_idx, az_idx, 0] = rad.astype(np.uint16)
+        range_img: NDArrayUShort = np.full(shape, fill_value=range_view.RANGE_FILL_VALUE, dtype=np.uint16)
+        range_img[inc_idx, az_idx, 0] = rad.astype(np.uint16)
+
+        xyz_img: NDArrayFloat = np.full((n_inclination_bins, n_azimuth_bins, 3), fill_value=np.inf, dtype=np.float64)
+        xyz_img[inc_idx, az_idx] = xyz_up_lidar
 
         intensity_im: NDArrayByte = np.full(shape, fill_value=range_view.INTENSITY_FILL_VALUE, dtype=np.uint8)
         intensity_im[inc_idx, az_idx, 0] = intensity
 
-        offset_im: NDArrayUShort = np.full(shape, fill_value=range_view.RANGE_FILL_VALUE, dtype=np.uint16)
-        offset_im[inc_idx, az_idx, 0] = offset_ns
+        offset_img: NDArrayUShort = np.full(shape, fill_value=range_view.RANGE_FILL_VALUE, dtype=np.uint16)
+        offset_img[inc_idx, az_idx, 0] = offset_ns
 
         return range_view.RangeView(
-            range=range_im,
-            intensity=intensity_im,
-            offset_ns=offset_im,
+            range_img=range_img,
+            xyz_img=xyz_img,
+            intensity_img=intensity_im,
+            offset_ns_img=offset_img,
             timestamp_ns=self.timestamp_ns,
             ego_SE3_up_lidar=self.ego_SE3_up_lidar,
             ego_SE3_down_lidar=self.ego_SE3_down_lidar,
